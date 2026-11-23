@@ -1,0 +1,36 @@
+name: Daily Instagram report
+
+on:
+  schedule:
+    - cron: "30 5 * * *"  # 09:00 Tehran time
+  workflow_dispatch: {}
+
+concurrency:
+  group: daily-report
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      # Keep yesterday's snapshot (for day-over-day changes) and drafts between runs.
+      - uses: actions/cache@v4
+        with:
+          path: data
+          key: agent-data-${{ github.run_id }}
+          restore-keys: agent-data-
+      - run: python -m agent daily
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ACCOUNT_BRIEF: ${{ vars.ACCOUNT_BRIEF }}
+          IG_GRAPH_HOST: ${{ vars.IG_GRAPH_HOST }}
